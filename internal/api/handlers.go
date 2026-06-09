@@ -46,8 +46,8 @@ func (api *API) HandleCreateURL(w http.ResponseWriter, r *http.Request) {
 
 func (api *API) HandleRetrieveOriginalURL(w http.ResponseWriter, r *http.Request) {
 	shortCode := r.PathValue("shortCode")
-	if shortCode == "" || len(shortCode) != shortCodeLength {
-		response.WriteErrorAndLog(w, errors.New("invalid shortcode length or format"), http.StatusBadRequest)
+	if err := validateShortCode(shortCode); err != nil {
+		response.WriteErrorAndLog(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -57,6 +57,43 @@ func (api *API) HandleRetrieveOriginalURL(w http.ResponseWriter, r *http.Request
 			response.WriteErrorAndLog(w, err, http.StatusNotFound)
 			return
 		}
+		response.WriteErrorAndLog(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	response.WriteJSON(w, urlResp, http.StatusOK)
+}
+
+func (api *API) HandleUpdateOriginalURL(w http.ResponseWriter, r *http.Request) {
+	shortCode := r.PathValue("shortCode")
+	if err := validateShortCode(shortCode); err != nil {
+		response.WriteErrorAndLog(w, err, http.StatusBadRequest)
+		return
+	}
+
+	var requestBody postBody
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		response.WriteErrorAndLog(w, err, http.StatusBadRequest)
+		return
+	}
+
+	if err := validateURL(requestBody.URL); err != nil {
+		response.WriteErrorAndLog(w, err, http.StatusBadRequest)
+		return
+	}
+
+	err := api.DB.UpdateOriginalByShortURL(requestBody.URL, shortCode)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			response.WriteErrorAndLog(w, err, http.StatusNotFound)
+			return
+		}
+		response.WriteErrorAndLog(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	urlResp, err := api.DB.GetOriginalURLByShortURL(shortCode) 
+	if err != nil {
 		response.WriteErrorAndLog(w, err, http.StatusInternalServerError)
 		return
 	}
