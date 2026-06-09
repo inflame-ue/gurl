@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-type ShortURL struct {
+type responseURL struct {
 	ID        int64  `json:"id"`
 	URL       string `json:"url"`
 	ShortCode string `json:"shortCode"`
@@ -26,8 +26,8 @@ func (db *DB) CreateShortURL(longURL, shortCode string) (int64, error) {
 	return id, nil
 }
 
-func (db *DB) GetShortURLByID(id int64) (*ShortURL, error) {
-	var result ShortURL
+func (db *DB) GetShortURLByID(id int64) (*responseURL, error) {
+	var result responseURL
 
 	row := db.Conn.QueryRow("SELECT id, url, short_code, created_at, updated_at FROM urls WHERE id = ?", id)
 	if err := row.Scan(&result.ID, &result.URL, &result.ShortCode, &result.CreatedAt, &result.UpdatedAt); err != nil {
@@ -35,6 +35,20 @@ func (db *DB) GetShortURLByID(id int64) (*ShortURL, error) {
 			return nil, fmt.Errorf("ShortURLsByID %d: no such url", id)
 		}
 		return nil, fmt.Errorf("ShortURLsByID %d: %w", id, err)
+	}
+
+	return &result, nil
+}
+
+func (db *DB) GetOriginalURLByShortURL(shortCode string) (*responseURL, error) {
+	var result responseURL
+
+	row := db.Conn.QueryRow("SELECT id, url, short_code, created_at, updated_at FROM urls WHERE short_code = ?", shortCode)
+	if err := row.Scan(&result.ID, &result.URL, &result.ShortCode, &result.CreatedAt, &result.UpdatedAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("OriginalURLByShortURL: no such short url: %s", shortCode)
+		}
+		return nil, fmt.Errorf("OriginalURLByShortURL %s: %w", shortCode, err)
 	}
 
 	return &result, nil
