@@ -14,6 +14,11 @@ type responseURL struct {
 	UpdatedAt string `json:"updatedAt"`
 }
 
+type statsResponse struct {
+	responseURL
+	AccessCount int `json:"accessCount"`
+}
+
 func (db *DB) CreateShortURL(longURL, shortCode string) (int64, error) {
 	stmt, err := db.Conn.Prepare("INSERT INTO urls (url, short_code) VALUES (?, ?)")
 	if err != nil {
@@ -82,9 +87,20 @@ func (db *DB) GetShortURLByID(id int64) (*responseURL, error) {
 func (db *DB) GetOriginalURLByShortURL(shortCode string) (*responseURL, error) {
 	var result responseURL
 
-	row := db.Conn.QueryRow("SELECT id, url, short_code, created_at, updated_at FROM urls WHERE short_code = ?", shortCode)
+	row := db.Conn.QueryRow("UPDATE urls SET access_count = access_count + 1 WHERE short_code = ? RETURNING id, url, short_code, created_at, updated_at", shortCode)
 	if err := row.Scan(&result.ID, &result.URL, &result.ShortCode, &result.CreatedAt, &result.UpdatedAt); err != nil {
 		return nil, fmt.Errorf("OriginalURLByShortURL %s: %w", shortCode, err)
+	}
+
+	return &result, nil
+}
+
+func (db *DB) GetStatsByShortURL(shortCode string) (*statsResponse, error) {
+	var result statsResponse
+
+	row := db.Conn.QueryRow("SELECT id, url, short_code, created_at, updated_at, access_count FROM urls WHERE short_code = ?", shortCode)
+	if err := row.Scan(&result.ID, &result.URL, &result.ShortCode, &result.CreatedAt, &result.UpdatedAt, &result.AccessCount); err != nil {
+		return nil, fmt.Errorf("StatsByShortURL %s: %w", shortCode, err)
 	}
 
 	return &result, nil
