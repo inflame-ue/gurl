@@ -1,7 +1,9 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
+	"time"
 )
 
 type responseURL struct {
@@ -13,7 +15,11 @@ type responseURL struct {
 }
 
 func (db *DB) CreateShortURL(longURL, shortCode string) (int64, error) {
-	result, err := db.Conn.Exec("INSERT INTO urls (url, short_code) VALUES (?, ?)", longURL, shortCode)
+	stmt, err := db.Conn.Prepare("INSERT INTO urls (url, short_code) VALUES (?, ?)")
+	if err != nil {
+		return 0, fmt.Errorf("CreateShortURL: %w", err)
+	}
+	result, err := stmt.Exec(longURL, shortCode)
 	if err != nil {
 		return 0, fmt.Errorf("CreateShortURL: %w", err)
 	}
@@ -22,6 +28,25 @@ func (db *DB) CreateShortURL(longURL, shortCode string) (int64, error) {
 		return 0, fmt.Errorf("CreateShortURL: %w", err)
 	}
 	return id, nil
+}
+
+func (db *DB) UpdateOriginalByShortURL(longURL, shortCode string) error {
+	stmt, err := db.Conn.Prepare("UPDATE urls SET url = ?, updated_at = ? WHERE short_code = ?")
+	if err != nil {
+		return fmt.Errorf("OriginalByShortURL: %w", err)
+	}
+	result, err := stmt.Exec(longURL, time.Now().UTC(), shortCode)
+	if err != nil {
+		return fmt.Errorf("OriginalByShortURL: %w", err)
+	}
+	num, err := result.RowsAffected()
+	if num == 0 {
+		return sql.ErrNoRows
+	}
+	if err != nil {
+		return fmt.Errorf("OriginalByShortURL: %w", err)
+	}
+	return nil
 }
 
 func (db *DB) GetShortURLByID(id int64) (*responseURL, error) {

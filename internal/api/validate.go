@@ -22,3 +22,10 @@ func validateURL(rawURL string) error {
 
 	return nil
 }
+
+func validateShortCode(shortCode string) error {
+	if shortCode == "" || len(shortCode) != shortCodeLength {
+		return errors.New("invalid shortcode length or format")
+	}
+	return nil
+}
