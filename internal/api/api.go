@@ -18,8 +18,9 @@ func NewServer(db *database.DB) *API {
 	}
 
 	svc.Mux.HandleFunc("POST /shorten", svc.HandleCreateURL)
-	svc.Mux.HandleFunc("GET /shorten/{shortCode}", svc.HandleRetrieveOriginalURL)
-	svc.Mux.HandleFunc("PUT /shorten/{shortCode}", svc.HandleUpdateOriginalURL)
+	svc.Mux.HandleFunc("GET /shorten/{shortCode}", svc.HandleRetrieveURL)
+	svc.Mux.HandleFunc("PUT /shorten/{shortCode}", svc.HandleUpdateURL)
+	svc.Mux.HandleFunc("DELETE /shorten/{shortCode}", svc.HandleDeleteURL)
 
 	return &svc
 }

@@ -49,6 +49,25 @@ func (db *DB) UpdateOriginalByShortURL(longURL, shortCode string) error {
 	return nil
 }
 
+func (db *DB) DeleteShortURL(shortCode string) error {
+	stmt, err := db.Conn.Prepare("DELETE FROM urls WHERE short_code = ?")
+	if err != nil {
+		return fmt.Errorf("DeleteShortURL: %w", err)
+	}
+	result, err := stmt.Exec(shortCode)
+	if err != nil {
+		return fmt.Errorf("DeleteShortURL: %w", err)
+	}
+	num, err := result.RowsAffected()
+	if num == 0 {
+		return sql.ErrNoRows
+	}
+	if err != nil {
+		return fmt.Errorf("DeleteShortURL: %w", err)
+	}
+	return nil
+}
+
 func (db *DB) GetShortURLByID(id int64) (*responseURL, error) {
 	var result responseURL
 
