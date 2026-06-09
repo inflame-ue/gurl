@@ -55,6 +55,7 @@ func (api *API) HandleRetrieveOriginalURL(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.WriteErrorAndLog(w, err, http.StatusBadRequest)
+			return
 		}
 		response.WriteErrorAndLog(w, err, http.StatusInternalServerError)
 		return
