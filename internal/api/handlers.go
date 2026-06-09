@@ -126,3 +126,23 @@ func (api *API) HandleDeleteURL(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (api *API) HandleStatisticsURL(w http.ResponseWriter, r *http.Request) {
+	shortCode := r.PathValue("shortCode")
+	if err := validateShortCode(shortCode); err != nil {
+		response.WriteErrorAndLog(w, err, http.StatusBadRequest)
+		return	
+	}
+
+	stats, err := api.DB.GetStatsByShortURL(shortCode)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			response.WriteErrorAndLog(w, err, http.StatusNotFound)
+			return
+		}
+		response.WriteErrorAndLog(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	response.WriteJSON(w, stats, http.StatusOK)
+}
