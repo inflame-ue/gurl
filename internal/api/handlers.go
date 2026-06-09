@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/inflame-ue/gurl/internal/response"
@@ -29,6 +30,8 @@ func (api *API) HandleCreateURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	shortCode := shorten.ShortenURL(shortCodeLength)
+	log.Printf("HandleCreateURL: creating entry with short code %s", shortCode)
+
 	id, err := api.DB.CreateShortURL(requestBody.URL, shortCode)
 	if err != nil {
 		response.WriteErrorAndLog(w, err, http.StatusInternalServerError)
@@ -44,13 +47,14 @@ func (api *API) HandleCreateURL(w http.ResponseWriter, r *http.Request) {
 	response.WriteJSON(w, urlResp, http.StatusCreated)
 }
 
-func (api *API) HandleRetrieveOriginalURL(w http.ResponseWriter, r *http.Request) {
+func (api *API) HandleRetrieveURL(w http.ResponseWriter, r *http.Request) {
 	shortCode := r.PathValue("shortCode")
 	if err := validateShortCode(shortCode); err != nil {
 		response.WriteErrorAndLog(w, err, http.StatusBadRequest)
 		return
 	}
 
+	log.Printf("HandleRetrieveURL: retrieving entry with short code %s", shortCode)
 	urlResp, err := api.DB.GetOriginalURLByShortURL(shortCode)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -64,7 +68,7 @@ func (api *API) HandleRetrieveOriginalURL(w http.ResponseWriter, r *http.Request
 	response.WriteJSON(w, urlResp, http.StatusOK)
 }
 
-func (api *API) HandleUpdateOriginalURL(w http.ResponseWriter, r *http.Request) {
+func (api *API) HandleUpdateURL(w http.ResponseWriter, r *http.Request) {
 	shortCode := r.PathValue("shortCode")
 	if err := validateShortCode(shortCode); err != nil {
 		response.WriteErrorAndLog(w, err, http.StatusBadRequest)
@@ -82,6 +86,7 @@ func (api *API) HandleUpdateOriginalURL(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	log.Printf("HandleUpdateURL: updating entry with short code %s", shortCode)
 	err := api.DB.UpdateOriginalByShortURL(requestBody.URL, shortCode)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -92,11 +97,32 @@ func (api *API) HandleUpdateOriginalURL(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	urlResp, err := api.DB.GetOriginalURLByShortURL(shortCode) 
+	urlResp, err := api.DB.GetOriginalURLByShortURL(shortCode)
 	if err != nil {
 		response.WriteErrorAndLog(w, err, http.StatusInternalServerError)
 		return
 	}
 
 	response.WriteJSON(w, urlResp, http.StatusOK)
+}
+
+func (api *API) HandleDeleteURL(w http.ResponseWriter, r *http.Request) {
+	shortCode := r.PathValue("shortCode")
+	if err := validateShortCode(shortCode); err != nil {
+		response.WriteErrorAndLog(w, err, http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("HandleDeleteURL: deleting entry with short code %s", shortCode)
+	err := api.DB.DeleteShortURL(shortCode)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			response.WriteErrorAndLog(w, err, http.StatusNotFound)
+			return
+		}
+		response.WriteErrorAndLog(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
