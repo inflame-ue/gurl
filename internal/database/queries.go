@@ -1,8 +1,6 @@
 package database
 
 import (
-	"database/sql"
-	"errors"
 	"fmt"
 )
 
@@ -31,9 +29,6 @@ func (db *DB) GetShortURLByID(id int64) (*responseURL, error) {
 
 	row := db.Conn.QueryRow("SELECT id, url, short_code, created_at, updated_at FROM urls WHERE id = ?", id)
 	if err := row.Scan(&result.ID, &result.URL, &result.ShortCode, &result.CreatedAt, &result.UpdatedAt); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("ShortURLsByID %d: no such url", id)
-		}
 		return nil, fmt.Errorf("ShortURLsByID %d: %w", id, err)
 	}
 
@@ -45,9 +40,6 @@ func (db *DB) GetOriginalURLByShortURL(shortCode string) (*responseURL, error) {
 
 	row := db.Conn.QueryRow("SELECT id, url, short_code, created_at, updated_at FROM urls WHERE short_code = ?", shortCode)
 	if err := row.Scan(&result.ID, &result.URL, &result.ShortCode, &result.CreatedAt, &result.UpdatedAt); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("OriginalURLByShortURL: no such short url: %s", shortCode)
-		}
 		return nil, fmt.Errorf("OriginalURLByShortURL %s: %w", shortCode, err)
 	}
 
