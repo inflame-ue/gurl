@@ -1,7 +1,9 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/inflame-ue/gurl/internal/response"
@@ -33,11 +35,30 @@ func (api *API) HandleCreateURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortCodeResp, err := api.DB.GetShortURLByID(id)
+	urlResp, err := api.DB.GetShortURLByID(id)
 	if err != nil {
 		response.WriteErrorAndLog(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	response.WriteJSON(w, shortCodeResp, http.StatusCreated)
+	response.WriteJSON(w, urlResp, http.StatusCreated)
+}
+
+func (api *API) HandleRetrieveOriginalURL(w http.ResponseWriter, r *http.Request) {
+	shortCode := r.PathValue("shortCode")
+	if shortCode == "" || len(shortCode) != shortCodeLength {
+		response.WriteErrorAndLog(w, errors.New("invalid shortcode length or format"), http.StatusBadRequest)
+		return
+	}
+
+	urlResp, err := api.DB.GetOriginalURLByShortURL(shortCode)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			response.WriteErrorAndLog(w, err, http.StatusBadRequest)
+		}
+		response.WriteErrorAndLog(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	response.WriteJSON(w, urlResp, http.StatusOK)
 }
